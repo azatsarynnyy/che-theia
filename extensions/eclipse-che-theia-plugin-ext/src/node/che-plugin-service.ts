@@ -24,7 +24,7 @@ import URI from '@theia/core/lib/common/uri';
 import { PluginFilter } from '../common/plugin/plugin-filter';
 import * as fs from 'fs-extra';
 import * as https from 'https';
-import { SS_CRT_PATH } from './che-https';
+import { PUBLIC_CRT_PATH, SS_CRT_PATH } from './che-https';
 
 const yaml = require('js-yaml');
 
@@ -127,11 +127,11 @@ export class ChePluginServiceImpl implements ChePluginService {
                 const httpOverHttpsAgent = tunnel.httpOverHttps({ proxy: httpsProxyOptions });
                 const httpsOverHttpAgent = tunnel.httpsOverHttp({
                     proxy: mainProxyOptions,
-                    ca: certificateAuthority ? [certificateAuthority] : undefined
+                    ca: certificateAuthority ? certificateAuthority : undefined
                 });
                 const httpsOverHttpsAgent = tunnel.httpsOverHttps({
                     proxy: httpsProxyOptions,
-                    ca: certificateAuthority ? [certificateAuthority] : undefined
+                    ca: certificateAuthority ? certificateAuthority : undefined
                 });
                 const urlIsHttps = (parsedBaseUrl.protocol || 'http:').startsWith('https:');
                 const proxyIsHttps = (parsedProxyUrl.protocol || 'http:').startsWith('https:');
@@ -155,13 +155,13 @@ export class ChePluginServiceImpl implements ChePluginService {
         return axios;
     }
 
-    private getHttpsProxyOptions(mainProxyOptions: tunnel.ProxyOptions, servername: string | undefined, certificateAuthority: Buffer | undefined): tunnel.HttpsProxyOptions {
+    private getHttpsProxyOptions(mainProxyOptions: tunnel.ProxyOptions, servername: string | undefined, certificateAuthority: Buffer[] | undefined): tunnel.HttpsProxyOptions {
         return {
             host: mainProxyOptions.host,
             port: mainProxyOptions.port,
             proxyAuth: mainProxyOptions.proxyAuth,
             servername,
-            ca: certificateAuthority ? [certificateAuthority] : undefined
+            ca: certificateAuthority ? certificateAuthority : undefined
         };
     }
 
@@ -196,12 +196,22 @@ export class ChePluginServiceImpl implements ChePluginService {
         return (typeof process !== 'undefined') && (typeof process.versions.node !== 'undefined');
     }
 
-    private getCertificateAuthority(): Buffer | undefined {
-        let certificateAuthority: Buffer | undefined;
+    private getCertificateAuthority(): Array<Buffer> | undefined {
+        const certificateAuthority: Buffer[] = [];
         if (fs.existsSync(SS_CRT_PATH)) {
-            certificateAuthority = fs.readFileSync(SS_CRT_PATH);
+            certificateAuthority.push(fs.readFileSync(SS_CRT_PATH));
         }
-        return certificateAuthority;
+
+        if (fs.existsSync(PUBLIC_CRT_PATH)) {
+            const publicCertificates = fs.readdirSync(PUBLIC_CRT_PATH);
+            for (const publicCertificate of publicCertificates) {
+                if (publicCertificate.endsWith('.crt')) {
+                    certificateAuthority.push(fs.readFileSync(publicCertificate));
+                }
+            }
+        }
+
+        return certificateAuthority.length > 1 ? certificateAuthority : undefined;
     }
 
     /**

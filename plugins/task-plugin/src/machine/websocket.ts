@@ -17,6 +17,7 @@ import * as https from 'https';
 import { IWebSocket, ConsoleLogger, createWebSocketConnection, Logger, MessageConnection } from 'vscode-ws-jsonrpc';
 
 const SS_CRT_PATH = '/tmp/che/secret/ca.crt';
+const PUBLIC_CRT_PATH = '/public-certs';
 
 /** Websocket wrapper allows to reconnect in case of failures */
 export class ReconnectingWebSocket {
@@ -180,10 +181,21 @@ export class ReconnectingWebSocket {
     }
 
     private getCertificateAuthority(): Buffer[] | undefined {
+        const certificateAuthority: Buffer[] = [];
         if (fs.existsSync(SS_CRT_PATH)) {
-            return [fs.readFileSync(SS_CRT_PATH)];
+            certificateAuthority.push(fs.readFileSync(SS_CRT_PATH));
         }
-        return undefined;
+
+        if (fs.existsSync(PUBLIC_CRT_PATH)) {
+            const publicCertificates = fs.readdirSync(PUBLIC_CRT_PATH);
+            for (const publicCertificate of publicCertificates) {
+                if (publicCertificate.endsWith('.crt')) {
+                    certificateAuthority.push(fs.readFileSync(publicCertificate));
+                }
+            }
+        }
+
+        return certificateAuthority.length > 1 ? certificateAuthority : undefined;
     }
 
     private shouldProxy(hostname: string): boolean {
