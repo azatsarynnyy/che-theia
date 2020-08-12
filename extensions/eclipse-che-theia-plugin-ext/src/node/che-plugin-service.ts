@@ -211,7 +211,7 @@ export class ChePluginServiceImpl implements ChePluginService {
             }
         }
 
-        return certificateAuthority.length > 1 ? certificateAuthority : undefined;
+        return certificateAuthority.length > 0 ? certificateAuthority : undefined;
     }
 
     /**

@@ -195,7 +195,7 @@ export class ReconnectingWebSocket {
             }
         }
 
-        return certificateAuthority.length > 1 ? certificateAuthority : undefined;
+        return certificateAuthority.length > 0 ? certificateAuthority : undefined;
     }
 
     private shouldProxy(hostname: string): boolean {
